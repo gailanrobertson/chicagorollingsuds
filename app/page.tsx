@@ -177,6 +177,10 @@ export default function HomePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.address) {
+      setError('Please fill in all fields above before submitting.'); return;
+    }
+    if (!addressConfirmed) { setError('Please select your address from the dropdown so we can look up your property.'); return; }
     if (selectedServices.size === 0) { setError('Please select at least one service.'); return; }
     setSubmitting(true); setError('');
     try {
@@ -203,29 +207,15 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white font-sans">
 
-      {/* Nav */}
-      <nav className="bg-[#0D1B4B] sticky top-0 z-50 shadow-lg">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Rolling Suds" className="h-12 w-auto" />
-          <button onClick={scrollToForm} className="bg-[#D4A017] hover:bg-[#b8891a] text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors shadow-md">
-            Get a Free Quote
-          </button>
-        </div>
-      </nav>
-
       {/* Hero */}
-      <section className="relative min-h-[580px] flex items-center justify-center">
+      <section className="relative min-h-[440px] flex items-center justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/photo-hero.png" alt="Rolling Suds at work" className="absolute inset-0 w-full h-full object-cover object-center" />
         <div className="absolute inset-0 bg-[#0D1B4B]/70" />
-        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center text-white py-24">
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center text-white py-20">
           <p className="text-[#D4A017] font-semibold text-sm uppercase tracking-widest mb-3">Schaumburg &amp; Rosemont</p>
           <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight drop-shadow-lg">Professional Power Washing for Your Home</h1>
-          <p className="text-gray-200 text-lg mb-8 max-w-xl mx-auto">Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.</p>
-          <button onClick={scrollToForm} className="bg-[#D4A017] hover:bg-[#b8891a] text-white px-10 py-4 rounded-lg font-bold text-lg transition-colors shadow-xl">
-            Get Your Free Quote
-          </button>
+          <p className="text-gray-200 text-lg max-w-xl mx-auto">Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.</p>
         </div>
       </section>
 
@@ -270,10 +260,17 @@ export default function HomePage() {
                   onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); } }}
                   placeholder="Start typing your address..."
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
-                {!addressConfirmed && form.address.length === 0 && (
-                  <p className="text-gray-500 text-xs mt-1">Select your address from the dropdown to get accurate pricing</p>
+                {!addressConfirmed && form.address.length > 0 && (
+                  <p className="text-yellow-500 text-xs mt-1">Select your address from the dropdown to confirm it</p>
                 )}
               </div>
+
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              <button type="submit" disabled={submitting}
+                className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg disabled:opacity-60">
+                {submitting ? 'Sending...' : 'Send My Quote'}
+              </button>
 
               {(housePhoto || loadingProperty) && (
                 <div className="rounded-xl overflow-hidden border border-white/10">
@@ -347,14 +344,6 @@ export default function HomePage() {
                 </div>
               )}
 
-              {error && <p className="text-red-400 text-sm">{error}</p>}
-
-              {addressConfirmed && !loadingProperty && (
-                <button type="submit" disabled={submitting || selectedServices.size === 0}
-                  className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors disabled:opacity-50 shadow-lg mt-2">
-                  {submitting ? 'Sending...' : 'Submit Request'}
-                </button>
-              )}
             </form>
           )}
         </div>
