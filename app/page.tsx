@@ -17,6 +17,15 @@ declare global {
 
 type ServiceKey = 'house' | 'windows' | 'walkway' | 'roof';
 
+const GALLERY = [
+  '/photo-before-after.jpg',
+  '/ba-1.png',
+  '/ba-2.png',
+  '/ba-3.png',
+  '/ba-4.png',
+  '/ba-5.png',
+];
+
 export default function HomePage() {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', address: '', notes: '' });
   const [selectedServices, setSelectedServices] = useState<Set<ServiceKey>>(new Set());
@@ -27,8 +36,24 @@ export default function HomePage() {
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [housePhoto, setHousePhoto] = useState('');
   const [addressConfirmed, setAddressConfirmed] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const galleryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
+
+  function galleryNav(dir: 1 | -1) {
+    setGalleryIndex(i => (i + dir + GALLERY.length) % GALLERY.length);
+    if (galleryTimer.current) clearTimeout(galleryTimer.current);
+    galleryTimer.current = setTimeout(() => setGalleryIndex(i => (i + 1) % GALLERY.length), 5000);
+  }
+
+  useEffect(() => {
+    galleryTimer.current = setTimeout(function tick() {
+      setGalleryIndex(i => (i + 1) % GALLERY.length);
+      galleryTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+    return () => { if (galleryTimer.current) clearTimeout(galleryTimer.current); };
+  }, []);
 
   const housePrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : 349;
   const roofPrice = Math.round(housePrice * ROOF_MULTIPLIER);
@@ -168,13 +193,33 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Before / After */}
+      {/* Before / After carousel */}
       <section className="py-16 px-4 bg-[#0D1B4B]">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl font-bold text-white mb-2">See the Difference</h2>
           <p className="text-gray-400 text-sm mb-8">Real results from our team — before and after a single visit</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/photo-before-after.jpg" alt="Before and after power washing" className="w-full rounded-2xl shadow-2xl max-w-2xl mx-auto" />
+          <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={GALLERY[galleryIndex]} alt="Before and after power washing" className="w-full rounded-2xl shadow-2xl" style={{ maxHeight: '520px', objectFit: 'cover' }} />
+            {/* Left arrow */}
+            <button onClick={() => galleryNav(-1)} aria-label="Previous"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-[#0D1B4B]/80 hover:bg-[#D4A017] text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-colors text-lg font-bold">
+              ‹
+            </button>
+            {/* Right arrow */}
+            <button onClick={() => galleryNav(1)} aria-label="Next"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-[#0D1B4B]/80 hover:bg-[#D4A017] text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-colors text-lg font-bold">
+              ›
+            </button>
+          </div>
+          {/* Dots */}
+          <div className="flex justify-center gap-2 mt-5">
+            {GALLERY.map((_, i) => (
+              <button key={i} onClick={() => galleryNav(i > galleryIndex ? 1 : -1)}
+                className="w-2 h-2 rounded-full transition-colors"
+                style={{ background: i === galleryIndex ? '#D4A017' : 'rgba(255,255,255,0.25)' }} />
+            ))}
+          </div>
         </div>
       </section>
 
