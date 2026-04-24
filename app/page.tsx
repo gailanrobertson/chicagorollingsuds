@@ -34,8 +34,8 @@ export default function HomePage() {
 
   const houseWashPrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : null;
   const roofWashPrice = houseWashPrice ? Math.round(houseWashPrice * ROOF_MULTIPLIER) : null;
-  const silverPrice = houseWashPrice ? houseWashPrice + 179 + 129 - 80 : null;
-  const fullPrice = (silverPrice && roofWashPrice) ? silverPrice + roofWashPrice - 180 : null;
+  const silverPrice = houseWashPrice ? Math.round((houseWashPrice + 179 + 129) * 0.90) : null;
+  const goldPrice = (houseWashPrice && roofWashPrice) ? Math.round((houseWashPrice + 179 + 129 + roofWashPrice) * 0.80) : null;
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -178,8 +178,8 @@ export default function HomePage() {
               { name: 'Exterior Window Cleaning', price: '$179' },
               { name: 'Front Walkway', price: '$129' },
               { name: 'Roof Wash', price: 'From $399', note: 'Priced by square footage' },
-              { name: 'Silver Property Package', price: 'From $597', note: 'House Wash + Exterior Windows + Front Walkway — save $80' },
-              { name: 'Full Property Package', price: 'From $896', note: 'Silver + Roof Wash — save $180' },
+              { name: 'Silver Package', price: '10% Off', note: 'House Wash + Exterior Windows + Front Walkway — bundled at a discount' },
+              { name: 'Gold Package', price: '20% Off', note: 'House Wash + Exterior Windows + Front Walkway + Roof Wash — best value' },
             ].map((s) => (
               <div key={s.name} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
                 <p className="font-bold text-[#0D1B4B] text-base mb-1">{s.name}</p>
@@ -293,11 +293,11 @@ export default function HomePage() {
                     <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>
                       Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}
                     </option>
-                    <option value={`Silver Property Package - ${silverPrice ? fmt(silverPrice) : '$597'}`}>
-                      Silver Property Package — {silverPrice ? fmt(silverPrice) : '$597'}
+                    <option value={`Silver Package (House, Windows & Walkway) - ${silverPrice ? fmt(silverPrice) : '10% off'}`}>
+                      🥈 Silver Package — House, Windows &amp; Walkway {silverPrice ? `— ${fmt(silverPrice)} (10% off!)` : '— 10% off bundled price'}
                     </option>
-                    <option value={`Full Property Package - ${fullPrice ? fmt(fullPrice) : '$896'}`}>
-                      Full Property Package — {fullPrice ? fmt(fullPrice) : '$896'}
+                    <option value={`Gold Package (All Services) - ${goldPrice ? fmt(goldPrice) : '20% off'}`}>
+                      🥇 Gold Package — All Services {goldPrice ? `— ${fmt(goldPrice)} (20% off!)` : '— 20% off bundled price'}
                     </option>
                   </select>
                   {squareFootage && (
