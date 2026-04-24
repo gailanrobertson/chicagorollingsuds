@@ -26,9 +26,10 @@ export async function POST(req: NextRequest) {
 
     // Email to customer (CC Gailan)
     await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'documents@gosuperclean.com',
+      from: 'Rolling Suds of Schaumburg <estimates@chicagorollingsuds.com>',
       to: email,
       cc: ['gailan.robertson@rollingsuds.com'],
+      replyTo: 'gailan.robertson@rollingsuds.com',
       subject: 'Your Estimate from Rolling Suds of Schaumburg – Rosemont',
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
