@@ -27,6 +27,7 @@ export default function HomePage() {
   const [squareFootage, setSquareFootage] = useState<number | null>(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [housePhoto, setHousePhoto] = useState('');
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
 
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
@@ -38,10 +39,10 @@ export default function HomePage() {
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || document.getElementById('gmaps-script')) return;
+    if (!apiKey) return;
 
-    window.initGoogleMaps = () => {
-      if (!addressInputRef.current) return;
+    function setupAutocomplete() {
+      if (!addressInputRef.current || autocompleteRef.current) return;
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
         addressInputRef.current,
         { types: ['address'], componentRestrictions: { country: 'us' } }
@@ -49,20 +50,28 @@ export default function HomePage() {
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current.getPlace();
         const addr = place.formatted_address || '';
-        setForm(prev => ({ ...prev, address: addr, service: '' }));
-        if (addr) handleAddressSelected(addr);
+        if (addr) {
+          setForm(prev => ({ ...prev, address: addr, service: '' }));
+          handleAddressSelected(addr);
+        }
       });
-    };
+    }
 
-    const script = document.createElement('script');
-    script.id = 'gmaps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
+    if (window.google?.maps?.places) {
+      setupAutocomplete();
+    } else if (!document.getElementById('gmaps-script')) {
+      window.initGoogleMaps = setupAutocomplete;
+      const script = document.createElement('script');
+      script.id = 'gmaps-script';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
   }, []);
 
   async function handleAddressSelected(address: string) {
+    setAddressConfirmed(true);
     setLoadingProperty(true);
     setSquareFootage(null);
     setHousePhoto('');
@@ -231,10 +240,20 @@ export default function HomePage() {
                   type="text"
                   id="address-input"
                   value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, address: e.target.value });
+                    if (addressConfirmed) {
+                      setAddressConfirmed(false);
+                      setHousePhoto('');
+                      setSquareFootage(null);
+                    }
+                  }}
                   placeholder="Start typing your address..."
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00A4C7] transition-colors"
                 />
+                {!addressConfirmed && form.address.length === 0 && (
+                  <p className="text-gray-500 text-xs mt-1">Select your address from the dropdown to get accurate pricing</p>
+                )}
               </div>
 
               {/* House photo + property info */}
@@ -258,40 +277,45 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Service selection with dynamic prices */}
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">Select Your Service *</label>
-                <select required value={form.service}
-                  onChange={(e) => setForm({ ...form, service: e.target.value })}
-                  className="w-full bg-[#1a2d5a] border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors">
-                  <option value="" disabled>Choose a service...</option>
-                  <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>
-                    House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}
-                  </option>
-                  <option value="Exterior Window Cleaning - $199">Exterior Window Cleaning — $199</option>
-                  <option value="Front Walkway - $129">Front Walkway — $129</option>
-                  <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>
-                    Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}
-                  </option>
-                  <option value={`Silver Property Package - ${silverPrice ? fmt(silverPrice) : '$597'}`}>
-                    Silver Property Package — {silverPrice ? fmt(silverPrice) : '$597'}
-                  </option>
-                  <option value={`Full Property Package - ${fullPrice ? fmt(fullPrice) : '$896'}`}>
-                    Full Property Package — {fullPrice ? fmt(fullPrice) : '$896'}
-                  </option>
-                </select>
-                {squareFootage && (
-                  <p className="text-[#00A4C7] text-xs mt-1">
-                    Prices calculated for your {squareFootage.toLocaleString()} sq ft home at ${PRICE_PER_SQFT}/sq ft
-                  </p>
-                )}
-              </div>
+              {/* Service selection — only shown after address is entered */}
+              {addressConfirmed && !loadingProperty && (
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">Select Your Service *</label>
+                  <select required value={form.service}
+                    onChange={(e) => setForm({ ...form, service: e.target.value })}
+                    className="w-full bg-[#1a2d5a] border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors">
+                    <option value="" disabled>Choose a service...</option>
+                    <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>
+                      House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}
+                    </option>
+                    <option value="Exterior Window Cleaning - $199">Exterior Window Cleaning — $199</option>
+                    <option value="Front Walkway - $129">Front Walkway — $129</option>
+                    <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>
+                      Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}
+                    </option>
+                    <option value={`Silver Property Package - ${silverPrice ? fmt(silverPrice) : '$597'}`}>
+                      Silver Property Package — {silverPrice ? fmt(silverPrice) : '$597'}
+                    </option>
+                    <option value={`Full Property Package - ${fullPrice ? fmt(fullPrice) : '$896'}`}>
+                      Full Property Package — {fullPrice ? fmt(fullPrice) : '$896'}
+                    </option>
+                  </select>
+                  {squareFootage && (
+                    <p className="text-[#00A4C7] text-xs mt-1">
+                      Prices calculated for your {squareFootage.toLocaleString()} sq ft home at ${PRICE_PER_SQFT}/sq ft
+                    </p>
+                  )}
+                </div>
+              )}
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
-              <button type="submit" disabled={submitting}
-                className="w-full bg-[#00A4C7] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0090b0] transition-colors disabled:opacity-50 mt-2">
-                {submitting ? 'Sending...' : 'Submit Request'}
-              </button>
+
+              {addressConfirmed && !loadingProperty && (
+                <button type="submit" disabled={submitting}
+                  className="w-full bg-[#00A4C7] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0090b0] transition-colors disabled:opacity-50 mt-2">
+                  {submitting ? 'Sending...' : 'Submit Request'}
+                </button>
+              )}
             </form>
           )}
         </div>
