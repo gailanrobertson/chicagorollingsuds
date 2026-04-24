@@ -127,31 +127,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services — condensed */}
-      <section className="py-14 px-4 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-[#0D1B4B] mb-2">What We Do</h2>
-          <p className="text-center text-gray-400 text-sm mb-8">Enter your address below for instant pricing on any service</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {SERVICES.map((s) => (
-              <div key={s.name} className="flex flex-col justify-center p-4 rounded-xl border border-gray-100 bg-gray-50 hover:border-[#00A4C7] hover:bg-white transition-all">
-                {s.icon && <span className="text-xl mb-1">{s.icon}</span>}
-                <p className="font-semibold text-[#0D1B4B] text-sm">{s.name}</p>
-                {s.sub && <p className="text-gray-400 text-xs mt-0.5">{s.sub}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Photo strip — action shots */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/photo-action.webp" alt="Rolling Suds crew at work" className="w-full h-64 md:h-80 object-cover" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/photo-house-wash.png" alt="Rolling Suds washing a home" className="w-full h-64 md:h-80 object-cover" />
-      </section>
-
       {/* Before / After */}
       <section className="py-16 px-4 bg-[#0D1B4B]">
         <div className="max-w-4xl mx-auto text-center">
