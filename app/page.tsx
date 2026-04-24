@@ -229,6 +229,137 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Quote Form */}
+      <section id="quote" className="py-20 px-4 bg-[#0D1B4B]">
+        <div className="max-w-xl mx-auto">
+          <h2 className="text-3xl font-bold text-white text-center mb-2">Get Your Free Quote</h2>
+          <p className="text-gray-400 text-center text-sm mb-10">Enter your information below for an instant price.</p>
+
+          {submitted ? (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-10 text-center">
+              <p className="text-green-400 text-2xl font-bold mb-3">Thank you!</p>
+              <p className="text-gray-300">We&apos;ve received your request and will reach out to you soon.</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">First Name *</label>
+                  <input required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">Last Name *</label>
+                  <input required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">Email *</label>
+                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">Phone Number *</label>
+                <input required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">Street Address *</label>
+                <input ref={addressInputRef} required type="text" id="address-input" value={form.address}
+                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); } }}
+                  placeholder="Start typing your address..."
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
+                {!addressConfirmed && form.address.length === 0 && (
+                  <p className="text-gray-500 text-xs mt-1">Select your address from the dropdown to get accurate pricing</p>
+                )}
+              </div>
+
+              {(housePhoto || loadingProperty) && (
+                <div className="rounded-xl overflow-hidden border border-white/10">
+                  {housePhoto && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={housePhoto} alt="Your home" className="w-full object-cover" style={{ maxHeight: '220px' }} />
+                  )}
+                  <div className="bg-white/5 px-4 py-3">
+                    {loadingProperty ? (
+                      <p className="text-gray-400 text-sm">Looking up property data...</p>
+                    ) : squareFootage ? (
+                      <p className="text-gray-300 text-sm"><span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home — prices calculated below</p>
+                    ) : (
+                      <p className="text-gray-500 text-sm">Property size not found — showing standard prices</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {addressConfirmed && !loadingProperty && (
+                <div>
+                  <label className="block text-gray-300 text-sm mb-3">Select Services *</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {SERVICE_OPTIONS.map((svc) => {
+                      const selected = selectedServices.has(svc.key);
+                      return (
+                        <button key={svc.key} type="button" onClick={() => toggleService(svc.key)}
+                          className="p-4 rounded-xl border-2 text-left transition-all"
+                          style={selected
+                            ? { borderColor: accentColor, backgroundColor: `${accentColor}22` }
+                            : { borderColor: 'rgba(255,255,255,0.20)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                          <p className="font-semibold text-sm" style={{ color: selected ? accentColor : 'white' }}>{svc.name}</p>
+                          <p className="text-xs mt-0.5" style={{ color: selected ? `${accentColor}BB` : '#9ca3af' }}>${svc.price.toLocaleString()}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {packageLabel && (
+                    <div className="mt-3 p-3 rounded-lg border text-center" style={{ background: bannerBg, borderColor: bannerBord }}>
+                      <p className="font-bold text-sm" style={platGrad}>{packageLabel}</p>
+                      {savings > 0 && <p className="text-xs mt-0.5" style={{ color: `${accentColor}AA` }}>You save ${savings.toLocaleString()}</p>}
+                    </div>
+                  )}
+
+                  {upsellMsg && (
+                    <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+                      <p className="text-xs" style={{ color: `${accentColor}99` }}>{upsellMsg}</p>
+                    </div>
+                  )}
+
+                  {selectedServices.size > 0 && (
+                    <div className="mt-3 flex items-center justify-between px-4 py-3 rounded-xl border" style={{ background: `${accentColor}11`, borderColor: `${accentColor}33` }}>
+                      <span className="text-sm" style={{ color: `${accentColor}CC` }}>{isPlatinum ? 'Platinum Package Total' : isGold ? 'Gold Package Total' : isSilver ? 'Silver Package Total' : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
+                      <span className="font-bold text-lg" style={{ color: accentColor }}>${totalPrice.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {addressConfirmed && !loadingProperty && (
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">Anything else? <span className="text-gray-500 font-normal">(optional)</span></label>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    rows={3}
+                    placeholder="List any additional services you're interested in — gutter cleaning, driveway sealing, etc. An estimator will call you with a free quote."
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors resize-none text-sm"
+                  />
+                </div>
+              )}
+
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              {addressConfirmed && !loadingProperty && (
+                <button type="submit" disabled={submitting || selectedServices.size === 0}
+                  className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors disabled:opacity-50 shadow-lg mt-2">
+                  {submitting ? 'Sending...' : 'Submit Request'}
+                </button>
+              )}
+            </form>
+          )}
+        </div>
+      </section>
+
       {/* Before / After carousel */}
       <section className="py-16 px-4 bg-[#0D1B4B]">
         <div className="max-w-2xl mx-auto text-center">
@@ -313,142 +444,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* Quote Form */}
-      <section id="quote" className="py-20 px-4 bg-[#0D1B4B]">
-        <div className="max-w-xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-2">Get Your Free Quote</h2>
-          <p className="text-gray-400 text-center text-sm mb-10">Enter your address for instant pricing based on your home&apos;s size.</p>
-
-          {submitted ? (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-10 text-center">
-              <p className="text-green-400 text-2xl font-bold mb-3">Thank you!</p>
-              <p className="text-gray-300">We&apos;ve received your request and will reach out to you soon.</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">First Name *</label>
-                  <input required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
-                </div>
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">Last Name *</label>
-                  <input required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">Email *</label>
-                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">Phone Number *</label>
-                <input required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">Street Address *</label>
-                <input ref={addressInputRef} required type="text" id="address-input" value={form.address}
-                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); } }}
-                  placeholder="Start typing your address..."
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
-                {!addressConfirmed && form.address.length === 0 && (
-                  <p className="text-gray-500 text-xs mt-1">Select your address from the dropdown to get accurate pricing</p>
-                )}
-              </div>
-
-              {/* House photo + property info */}
-              {(housePhoto || loadingProperty) && (
-                <div className="rounded-xl overflow-hidden border border-white/10">
-                  {housePhoto && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={housePhoto} alt="Your home" className="w-full object-cover" style={{ maxHeight: '220px' }} />
-                  )}
-                  <div className="bg-white/5 px-4 py-3">
-                    {loadingProperty ? (
-                      <p className="text-gray-400 text-sm">Looking up property data...</p>
-                    ) : squareFootage ? (
-                      <p className="text-gray-300 text-sm"><span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home — prices calculated below</p>
-                    ) : (
-                      <p className="text-gray-500 text-sm">Property size not found — showing standard prices</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Service toggles — only shown after address confirmed */}
-              {addressConfirmed && !loadingProperty && (
-                <div>
-                  <label className="block text-gray-300 text-sm mb-3">Select Services *</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SERVICE_OPTIONS.map((svc) => {
-                      const selected = selectedServices.has(svc.key);
-                      return (
-                        <button key={svc.key} type="button" onClick={() => toggleService(svc.key)}
-                          className="p-4 rounded-xl border-2 text-left transition-all"
-                          style={selected
-                            ? { borderColor: accentColor, backgroundColor: `${accentColor}22` }
-                            : { borderColor: 'rgba(255,255,255,0.20)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                          <p className="font-semibold text-sm" style={{ color: selected ? accentColor : 'white' }}>{svc.name}</p>
-                          <p className="text-xs mt-0.5" style={{ color: selected ? `${accentColor}BB` : '#9ca3af' }}>${svc.price.toLocaleString()}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Package upgrade banner */}
-                  {packageLabel && (
-                    <div className="mt-3 p-3 rounded-lg border text-center" style={{ background: bannerBg, borderColor: bannerBord }}>
-                      <p className="font-bold text-sm" style={platGrad}>{packageLabel}</p>
-                      {savings > 0 && <p className="text-xs mt-0.5" style={{ color: `${accentColor}AA` }}>You save ${savings.toLocaleString()}</p>}
-                    </div>
-                  )}
-
-                  {/* Upsell nudge */}
-                  {upsellMsg && (
-                    <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 text-center">
-                      <p className="text-xs" style={{ color: `${accentColor}99` }}>{upsellMsg}</p>
-                    </div>
-                  )}
-
-                  {/* Running total */}
-                  {selectedServices.size > 0 && (
-                    <div className="mt-3 flex items-center justify-between px-4 py-3 rounded-xl border" style={{ background: `${accentColor}11`, borderColor: `${accentColor}33` }}>
-                      <span className="text-sm" style={{ color: `${accentColor}CC` }}>{isPlatinum ? 'Platinum Package Total' : isGold ? 'Gold Package Total' : isSilver ? 'Silver Package Total' : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
-                      <span className="font-bold text-lg" style={{ color: accentColor }}>${totalPrice.toLocaleString()}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {addressConfirmed && !loadingProperty && (
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">Anything else? <span className="text-gray-500 font-normal">(optional)</span></label>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    rows={3}
-                    placeholder="List any additional services you're interested in — gutter cleaning, driveway sealing, etc. An estimator will call you with a free quote."
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors resize-none text-sm"
-                  />
-                </div>
-              )}
-
-              {error && <p className="text-red-400 text-sm">{error}</p>}
-
-              {addressConfirmed && !loadingProperty && (
-                <button type="submit" disabled={submitting || selectedServices.size === 0}
-                  className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors disabled:opacity-50 shadow-lg mt-2">
-                  {submitting ? 'Sending...' : 'Submit Request'}
-                </button>
-              )}
-            </form>
           )}
         </div>
       </section>
