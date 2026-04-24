@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Email to customer (CC Gailan)
     await resend.emails.send({
-      from: 'Rolling Suds of Schaumburg <estimates@chicagorollingsuds.com>',
+      from: 'Rolling Suds of Schaumburg <estimates@rollingsudsofschaumburgrosemont.com>',
       to: email,
       cc: ['gailan.robertson@rollingsuds.com'],
       replyTo: 'gailan.robertson@rollingsuds.com',
