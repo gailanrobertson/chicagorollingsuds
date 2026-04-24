@@ -182,7 +182,16 @@ export default function HomePage() {
     try {
       const res = await fetch('/api/contact', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, squareFootage, service: buildServiceString(), total: totalPrice }),
+        body: JSON.stringify({
+          ...form,
+          squareFootage,
+          service: buildServiceString(),
+          services: SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => ({ name: s.name, price: s.price })),
+          baseTotal,
+          total: totalPrice,
+          savings,
+          packageName: isPlatinum ? 'Platinum Package' : isGold ? 'Gold Package' : isSilver ? 'Silver Package' : null,
+        }),
       });
       const data = await res.json();
       if (data.success) setSubmitted(true);
