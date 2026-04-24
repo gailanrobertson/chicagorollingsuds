@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-const PRICE_PER_SQFT = 5.15;
+const PRICE_PER_SQFT = 0.18;
 const ROOF_MULTIPLIER = 1.25;
 
 const WHY = [
