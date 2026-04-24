@@ -213,9 +213,9 @@ export default function HomePage() {
         <img src="/photo-hero.png" alt="Rolling Suds at work" className="absolute inset-0 w-full h-full object-cover object-center" />
         <div className="absolute inset-0 bg-[#0D1B4B]/70" />
         <div className="relative z-10 max-w-3xl mx-auto px-4 text-center text-white py-20">
-          <p className="text-[#D4A017] font-semibold text-sm uppercase tracking-widest mb-3">Schaumburg &amp; Rosemont</p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight drop-shadow-lg">Professional Power Washing for Your Home</h1>
-          <p className="text-gray-200 text-lg max-w-xl mx-auto">Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight drop-shadow-lg">Rolling Suds of Schaumburg – Rosemont</h1>
+          <p className="text-[#D4A017] text-xl md:text-2xl font-semibold mb-3 drop-shadow">Get Your Instant Home Wash Quote</p>
+          <p className="text-gray-200 text-base max-w-xl mx-auto">Fill in your info below and get a real price in seconds — no phone call needed.</p>
         </div>
       </section>
 
