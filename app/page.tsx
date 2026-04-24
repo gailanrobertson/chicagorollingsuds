@@ -265,13 +265,6 @@ export default function HomePage() {
                 )}
               </div>
 
-              {error && <p className="text-red-400 text-sm">{error}</p>}
-
-              <button type="submit" disabled={submitting}
-                className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg disabled:opacity-60">
-                {submitting ? 'Sending...' : 'Send My Quote'}
-              </button>
-
               {(housePhoto || loadingProperty) && (
                 <div className="rounded-xl overflow-hidden border border-white/10">
                   {housePhoto && (
@@ -342,6 +335,15 @@ export default function HomePage() {
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors resize-none text-sm"
                   />
                 </div>
+              )}
+
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              {addressConfirmed && !loadingProperty && (
+                <button type="submit" disabled={submitting}
+                  className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg disabled:opacity-60">
+                  {submitting ? 'Sending...' : 'Send My Quote'}
+                </button>
               )}
 
             </form>
