@@ -5,17 +5,23 @@ import { useState, useEffect, useRef } from 'react';
 const PRICE_PER_SQFT = 0.2163;
 const ROOF_MULTIPLIER = 1.25;
 
+const SERVICES = [
+  { name: 'House Power Wash', icon: '🏠' },
+  { name: 'Exterior Window Cleaning', icon: '🪟' },
+  { name: 'Front Walkway', icon: '🚶' },
+  { name: 'Roof Wash', icon: '🏚️' },
+  { name: '🥈 Silver Package', sub: 'House + Windows + Walkway — 10% off' },
+  { name: '🥇 Gold Package', sub: 'All Services — 20% off' },
+];
+
 const WHY = [
-  { title: 'Locally Owned & Operated', desc: 'Proudly serving Schaumburg, Rosemont, and the surrounding communities.' },
+  { title: 'Locally Owned & Operated', desc: 'Proudly serving Schaumburg, Rosemont, and surrounding communities.' },
   { title: 'Fully Insured', desc: 'Your property is in safe hands. We carry full liability insurance on every job.' },
   { title: 'Satisfaction Guaranteed', desc: "We don't leave until the job is done right — every time." },
 ];
 
 declare global {
-  interface Window {
-    google: any;
-    initGoogleMaps: () => void;
-  }
+  interface Window { google: any; initGoogleMaps: () => void; }
 }
 
 export default function HomePage() {
@@ -23,12 +29,10 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
-
   const [squareFootage, setSquareFootage] = useState<number | null>(null);
   const [loadingProperty, setLoadingProperty] = useState(false);
   const [housePhoto, setHousePhoto] = useState('');
   const [addressConfirmed, setAddressConfirmed] = useState(false);
-
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
 
@@ -40,7 +44,6 @@ export default function HomePage() {
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) return;
-
     function setupAutocomplete() {
       if (!addressInputRef.current || autocompleteRef.current) return;
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
@@ -50,78 +53,46 @@ export default function HomePage() {
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current.getPlace();
         const addr = place.formatted_address || '';
-        if (addr) {
-          setForm(prev => ({ ...prev, address: addr, service: '' }));
-          handleAddressSelected(addr);
-        }
+        if (addr) { setForm(prev => ({ ...prev, address: addr, service: '' })); handleAddressSelected(addr); }
       });
     }
-
-    if (window.google?.maps?.places) {
-      setupAutocomplete();
-    } else if (!document.getElementById('gmaps-script')) {
+    if (window.google?.maps?.places) { setupAutocomplete(); }
+    else if (!document.getElementById('gmaps-script')) {
       window.initGoogleMaps = setupAutocomplete;
       const script = document.createElement('script');
       script.id = 'gmaps-script';
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
-      script.async = true;
-      script.defer = true;
+      script.async = true; script.defer = true;
       document.head.appendChild(script);
     }
   }, []);
 
   async function handleAddressSelected(address: string) {
-    setAddressConfirmed(true);
-    setLoadingProperty(true);
-    setSquareFootage(null);
-    setHousePhoto('');
-
+    setAddressConfirmed(true); setLoadingProperty(true); setSquareFootage(null); setHousePhoto('');
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (apiKey) {
-      setHousePhoto(`https://maps.googleapis.com/maps/api/streetview?size=700x350&location=${encodeURIComponent(address)}&key=${apiKey}`);
-    }
-
+    if (apiKey) setHousePhoto(`https://maps.googleapis.com/maps/api/streetview?size=700x350&location=${encodeURIComponent(address)}&key=${apiKey}`);
     try {
       const res = await fetch(`/api/property?address=${encodeURIComponent(address)}`);
       const data = await res.json();
-      if (data.found && data.squareFootage) {
-        setSquareFootage(data.squareFootage);
-      }
-    } catch {
-      // default prices remain
-    }
+      if (data.found && data.squareFootage) setSquareFootage(data.squareFootage);
+    } catch { /* default prices remain */ }
     setLoadingProperty(false);
   }
 
-  function scrollToForm() {
-    document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' });
-  }
+  function scrollToForm() { document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' }); }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
+    e.preventDefault(); setSubmitting(true); setError('');
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, squareFootage }),
-      });
+      const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, squareFootage }) });
       const data = await res.json();
-      if (data.success) {
-        setSubmitted(true);
-      } else {
-        setError('Something went wrong. Please try again or call us directly.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again or call us directly.');
-    }
+      if (data.success) setSubmitted(true);
+      else setError('Something went wrong. Please try again or call us directly.');
+    } catch { setError('Something went wrong. Please try again or call us directly.'); }
     setSubmitting(false);
   }
 
-  function fmt(n: number) {
-    return '$' + n.toLocaleString();
-  }
+  function fmt(n: number) { return '$' + n.toLocaleString(); }
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -131,23 +102,63 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Rolling Suds" className="h-12 w-auto" />
-          <button onClick={scrollToForm} className="bg-[#00A4C7] text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-[#0090b0] transition-colors">
+          <button onClick={scrollToForm} className="bg-[#D4A017] hover:bg-[#b8891a] text-white px-5 py-2 rounded-lg font-bold text-sm transition-colors shadow-md">
             Get a Free Quote
           </button>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="bg-[#0D1B4B] text-white py-24 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-[#00A4C7] font-semibold text-sm uppercase tracking-widest mb-3">Schaumburg &amp; Rosemont</p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight">Professional Power Washing for Your Home</h1>
-          <p className="text-gray-300 text-lg mb-8 max-w-xl mx-auto">
-            Rolling Suds of Schaumburg - Rosemont delivers expert residential power washing. We keep your home looking its best — guaranteed.
+      {/* Hero — full bleed photo */}
+      <section className="relative min-h-[580px] flex items-center justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/photo-hero.png" alt="Rolling Suds at work" className="absolute inset-0 w-full h-full object-cover object-center" />
+        <div className="absolute inset-0 bg-[#0D1B4B]/70" />
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-center text-white py-24">
+          <p className="text-[#D4A017] font-semibold text-sm uppercase tracking-widest mb-3">Schaumburg &amp; Rosemont</p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight drop-shadow-lg">
+            Professional Power Washing for Your Home
+          </h1>
+          <p className="text-gray-200 text-lg mb-8 max-w-xl mx-auto">
+            Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.
           </p>
-          <button onClick={scrollToForm} className="bg-[#00A4C7] text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-[#0090b0] transition-colors shadow-lg">
+          <button onClick={scrollToForm} className="bg-[#D4A017] hover:bg-[#b8891a] text-white px-10 py-4 rounded-lg font-bold text-lg transition-colors shadow-xl">
             Get Your Free Quote
           </button>
+        </div>
+      </section>
+
+      {/* Services — condensed */}
+      <section className="py-14 px-4 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center text-[#0D1B4B] mb-2">What We Do</h2>
+          <p className="text-center text-gray-400 text-sm mb-8">Enter your address below for instant pricing on any service</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {SERVICES.map((s) => (
+              <div key={s.name} className="flex flex-col justify-center p-4 rounded-xl border border-gray-100 bg-gray-50 hover:border-[#00A4C7] hover:bg-white transition-all">
+                {s.icon && <span className="text-xl mb-1">{s.icon}</span>}
+                <p className="font-semibold text-[#0D1B4B] text-sm">{s.name}</p>
+                {s.sub && <p className="text-gray-400 text-xs mt-0.5">{s.sub}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Photo strip — action shots */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/photo-action.webp" alt="Rolling Suds crew at work" className="w-full h-64 md:h-80 object-cover" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/photo-house-wash.png" alt="Rolling Suds washing a home" className="w-full h-64 md:h-80 object-cover" />
+      </section>
+
+      {/* Before / After */}
+      <section className="py-16 px-4 bg-[#0D1B4B]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-white mb-2">See the Difference</h2>
+          <p className="text-gray-400 text-sm mb-8">Real results from our team — before and after a single visit</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/photo-before-after.jpg" alt="Before and after power washing" className="w-full rounded-2xl shadow-2xl max-w-2xl mx-auto" />
         </div>
       </section>
 
@@ -158,33 +169,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {WHY.map((item) => (
               <div key={item.title} className="p-6 border border-gray-200 rounded-xl text-center">
-                <div className="w-10 h-1 bg-[#00A4C7] mx-auto mb-4 rounded" />
+                <div className="w-10 h-1 bg-[#D4A017] mx-auto mb-4 rounded" />
                 <h3 className="text-base font-bold text-[#0D1B4B] mb-2">{item.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Services */}
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-[#0D1B4B] mb-2">Our Services</h2>
-          <p className="text-center text-gray-500 text-sm mb-10">Starting prices shown before tax</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { name: 'House Power Wash', price: 'From $349', note: 'Priced by square footage' },
-              { name: 'Exterior Window Cleaning', price: '$179' },
-              { name: 'Front Walkway', price: '$129' },
-              { name: 'Roof Wash', price: 'From $399', note: 'Priced by square footage' },
-              { name: 'Silver Package', price: '10% Off', note: 'House Wash + Exterior Windows + Front Walkway — bundled at a discount' },
-              { name: 'Gold Package', price: '20% Off', note: 'House Wash + Exterior Windows + Front Walkway + Roof Wash — best value' },
-            ].map((s) => (
-              <div key={s.name} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-                <p className="font-bold text-[#0D1B4B] text-base mb-1">{s.name}</p>
-                {s.note && <p className="text-gray-400 text-xs mb-3 leading-relaxed">{s.note}</p>}
-                <p className="text-[#00A4C7] font-bold text-2xl">{s.price}</p>
               </div>
             ))}
           </div>
@@ -207,50 +194,31 @@ export default function HomePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">First Name *</label>
-                  <input required type="text" value={form.firstName}
-                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors" />
+                  <input required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
                 </div>
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">Last Name *</label>
-                  <input required type="text" value={form.lastName}
-                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors" />
+                  <input required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
                 </div>
               </div>
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Email *</label>
-                <input required type="email" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors" />
+                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
               </div>
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Phone Number *</label>
-                <input required type="tel" value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors" />
+                <input required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
               </div>
-
-              {/* Address with autocomplete */}
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Street Address *</label>
-                <input
-                  ref={addressInputRef}
-                  required
-                  type="text"
-                  id="address-input"
-                  value={form.address}
-                  onChange={(e) => {
-                    setForm({ ...form, address: e.target.value });
-                    if (addressConfirmed) {
-                      setAddressConfirmed(false);
-                      setHousePhoto('');
-                      setSquareFootage(null);
-                    }
-                  }}
+                <input ref={addressInputRef} required type="text" id="address-input" value={form.address}
+                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); } }}
                   placeholder="Start typing your address..."
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#00A4C7] transition-colors"
-                />
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
                 {!addressConfirmed && form.address.length === 0 && (
                   <p className="text-gray-500 text-xs mt-1">Select your address from the dropdown to get accurate pricing</p>
                 )}
@@ -267,9 +235,7 @@ export default function HomePage() {
                     {loadingProperty ? (
                       <p className="text-gray-400 text-sm">Looking up property data...</p>
                     ) : squareFootage ? (
-                      <p className="text-gray-300 text-sm">
-                        <span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home detected — prices calculated below
-                      </p>
+                      <p className="text-gray-300 text-sm"><span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home detected — prices calculated below</p>
                     ) : (
                       <p className="text-gray-500 text-sm">Property size not found — showing standard prices</p>
                     )}
@@ -277,34 +243,21 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Service selection — only shown after address is entered */}
+              {/* Service selection — only shown after address confirmed */}
               {addressConfirmed && !loadingProperty && (
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">Select Your Service *</label>
-                  <select required value={form.service}
-                    onChange={(e) => setForm({ ...form, service: e.target.value })}
-                    className="w-full bg-[#1a2d5a] border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#00A4C7] transition-colors">
+                  <select required value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })}
+                    className="w-full bg-[#1a2d5a] border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors">
                     <option value="" disabled>Choose a service...</option>
-                    <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>
-                      House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}
-                    </option>
+                    <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}</option>
                     <option value="Exterior Window Cleaning - $179">Exterior Window Cleaning — $179</option>
                     <option value="Front Walkway - $129">Front Walkway — $129</option>
-                    <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>
-                      Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}
-                    </option>
-                    <option value={`Silver Package (House, Windows & Walkway) - ${silverPrice ? fmt(silverPrice) : '10% off'}`}>
-                      🥈 Silver Package — House, Windows &amp; Walkway {silverPrice ? `— ${fmt(silverPrice)} (10% off!)` : '— 10% off bundled price'}
-                    </option>
-                    <option value={`Gold Package (All Services) - ${goldPrice ? fmt(goldPrice) : '20% off'}`}>
-                      🥇 Gold Package — All Services {goldPrice ? `— ${fmt(goldPrice)} (20% off!)` : '— 20% off bundled price'}
-                    </option>
+                    <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}</option>
+                    <option value={`Silver Package - ${silverPrice ? fmt(silverPrice) : 'save 10%'}`}>🥈 Silver Package — House, Windows &amp; Walkway {silverPrice ? `— ${fmt(silverPrice)} (10% off!)` : '— 10% off'}</option>
+                    <option value={`Gold Package - ${goldPrice ? fmt(goldPrice) : 'save 20%'}`}>🥇 Gold Package — All Services {goldPrice ? `— ${fmt(goldPrice)} (20% off!)` : '— 20% off'}</option>
                   </select>
-                  {squareFootage && (
-                    <p className="text-[#00A4C7] text-xs mt-1">
-                      Prices calculated for your {squareFootage.toLocaleString()} sq ft home at ${PRICE_PER_SQFT}/sq ft
-                    </p>
-                  )}
+                  {squareFootage && <p className="text-[#D4A017] text-xs mt-1">Prices calculated for your {squareFootage.toLocaleString()} sq ft home at ${PRICE_PER_SQFT}/sq ft</p>}
                 </div>
               )}
 
@@ -312,7 +265,7 @@ export default function HomePage() {
 
               {addressConfirmed && !loadingProperty && (
                 <button type="submit" disabled={submitting}
-                  className="w-full bg-[#00A4C7] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0090b0] transition-colors disabled:opacity-50 mt-2">
+                  className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors disabled:opacity-50 shadow-lg mt-2">
                   {submitting ? 'Sending...' : 'Submit Request'}
                 </button>
               )}
