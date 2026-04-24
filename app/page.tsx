@@ -38,6 +38,9 @@ export default function HomePage() {
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const galleryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [reviews, setReviews] = useState<{ author: string; rating: number; text: string; time: string }[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
 
@@ -54,6 +57,30 @@ export default function HomePage() {
     }, 5000);
     return () => { if (galleryTimer.current) clearTimeout(galleryTimer.current); };
   }, []);
+
+  useEffect(() => {
+    fetch('/api/reviews').then(r => r.json()).then(d => {
+      if (d.reviews?.length) setReviews(d.reviews);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!reviews.length) return;
+    reviewTimer.current = setTimeout(function tick() {
+      setReviewIndex(i => (i + 1) % reviews.length);
+      reviewTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+    return () => { if (reviewTimer.current) clearTimeout(reviewTimer.current); };
+  }, [reviews]);
+
+  function reviewNav(dir: 1 | -1) {
+    setReviewIndex(i => (i + dir + reviews.length) % reviews.length);
+    if (reviewTimer.current) clearTimeout(reviewTimer.current);
+    reviewTimer.current = setTimeout(function tick() {
+      setReviewIndex(i => (i + 1) % reviews.length);
+      reviewTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+  }
 
   const housePrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : 349;
   const roofPrice = Math.round(housePrice * ROOF_MULTIPLIER);
@@ -236,6 +263,48 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
+          {/* Google Reviews carousel */}
+          {reviews.length > 0 && (
+            <div className="mt-14">
+              <p className="text-center text-sm font-semibold text-[#D4A017] uppercase tracking-widest mb-6">What Our Customers Say</p>
+              <div className="relative max-w-2xl mx-auto">
+                <div className="bg-[#0D1B4B] rounded-2xl px-8 py-8 text-center shadow-lg min-h-[200px] flex flex-col justify-between">
+                  {/* Stars */}
+                  <div className="flex justify-center gap-1 mb-4">
+                    {Array.from({ length: reviews[reviewIndex].rating }).map((_, i) => (
+                      <span key={i} className="text-[#D4A017] text-lg">★</span>
+                    ))}
+                  </div>
+                  {/* Review text */}
+                  <p className="text-gray-200 text-sm leading-relaxed italic flex-1">&ldquo;{reviews[reviewIndex].text}&rdquo;</p>
+                  {/* Author */}
+                  <div className="mt-5">
+                    <p className="text-white font-semibold text-sm">{reviews[reviewIndex].author}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">{reviews[reviewIndex].time} · Google Review</p>
+                  </div>
+                </div>
+                {/* Left arrow */}
+                <button onClick={() => reviewNav(-1)} aria-label="Previous review"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 bg-white border border-gray-200 hover:bg-[#D4A017] hover:border-[#D4A017] hover:text-white text-[#0D1B4B] rounded-full w-10 h-10 flex items-center justify-center shadow transition-colors text-lg font-bold">
+                  ‹
+                </button>
+                {/* Right arrow */}
+                <button onClick={() => reviewNav(1)} aria-label="Next review"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 bg-white border border-gray-200 hover:bg-[#D4A017] hover:border-[#D4A017] hover:text-white text-[#0D1B4B] rounded-full w-10 h-10 flex items-center justify-center shadow transition-colors text-lg font-bold">
+                  ›
+                </button>
+              </div>
+              {/* Dots */}
+              <div className="flex justify-center gap-2 mt-5">
+                {reviews.map((_, i) => (
+                  <button key={i} onClick={() => { setReviewIndex(i); if (reviewTimer.current) clearTimeout(reviewTimer.current); }}
+                    className="w-2 h-2 rounded-full transition-colors"
+                    style={{ background: i === reviewIndex ? '#D4A017' : '#cbd5e1' }} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
