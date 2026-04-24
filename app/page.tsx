@@ -34,7 +34,7 @@ export default function HomePage() {
 
   const houseWashPrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : null;
   const roofWashPrice = houseWashPrice ? Math.round(houseWashPrice * ROOF_MULTIPLIER) : null;
-  const silverPrice = houseWashPrice ? houseWashPrice + 199 + 129 - 80 : null;
+  const silverPrice = houseWashPrice ? houseWashPrice + 179 + 129 - 80 : null;
   const fullPrice = (silverPrice && roofWashPrice) ? silverPrice + roofWashPrice - 180 : null;
 
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               { name: 'House Power Wash', price: 'From $349', note: 'Priced by square footage' },
-              { name: 'Exterior Window Cleaning', price: '$199' },
+              { name: 'Exterior Window Cleaning', price: '$179' },
               { name: 'Front Walkway', price: '$129' },
               { name: 'Roof Wash', price: 'From $399', note: 'Priced by square footage' },
               { name: 'Silver Property Package', price: 'From $597', note: 'House Wash + Exterior Windows + Front Walkway — save $80' },
@@ -288,7 +288,7 @@ export default function HomePage() {
                     <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>
                       House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}
                     </option>
-                    <option value="Exterior Window Cleaning - $199">Exterior Window Cleaning — $199</option>
+                    <option value="Exterior Window Cleaning - $179">Exterior Window Cleaning — $179</option>
                     <option value="Front Walkway - $129">Front Walkway — $129</option>
                     <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>
                       Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}
