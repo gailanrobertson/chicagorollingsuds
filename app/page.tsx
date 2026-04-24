@@ -18,7 +18,7 @@ declare global {
 type ServiceKey = 'house' | 'windows' | 'walkway' | 'roof';
 
 export default function HomePage() {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', address: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', address: '', notes: '' });
   const [selectedServices, setSelectedServices] = useState<Set<ServiceKey>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -274,6 +274,19 @@ export default function HomePage() {
                       <span className="text-white font-bold text-lg">${totalPrice.toLocaleString()}</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {addressConfirmed && !loadingProperty && (
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">Anything else? <span className="text-gray-500 font-normal">(optional)</span></label>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    rows={3}
+                    placeholder="List any additional services you're interested in — gutter cleaning, driveway sealing, etc. An estimator will call you with a free quote."
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors resize-none text-sm"
+                  />
                 </div>
               )}
 
