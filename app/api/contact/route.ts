@@ -18,8 +18,13 @@ export async function POST(req: NextRequest) {
       notes,
     };
 
-    const pdfBytes = await generateEstimatePdf(estimateData);
-    const pdfBuffer = Buffer.from(pdfBytes);
+    let pdfAttachment: { filename: string; content: Buffer }[] = [];
+    try {
+      const pdfBytes = await generateEstimatePdf(estimateData);
+      pdfAttachment = [{ filename: `Estimate-${firstName}-${lastName}.pdf`, content: Buffer.from(pdfBytes) }];
+    } catch (pdfErr) {
+      console.error('PDF generation failed:', pdfErr);
+    }
 
     const serviceList = (services || []).map((s: { name: string; price: number }) => `<li>${s.name} — $${s.price.toLocaleString()}</li>`).join('');
     const discountLine = savings > 0 && packageName ? `<li style="color:#b8860b;">${packageName} Discount — -$${savings.toLocaleString()}</li>` : '';
@@ -60,12 +65,7 @@ export async function POST(req: NextRequest) {
           </div>
         </div>
       `,
-      attachments: [
-        {
-          filename: `Estimate-${firstName}-${lastName}.pdf`,
-          content: pdfBuffer,
-        },
-      ],
+      attachments: pdfAttachment,
     });
 
     return NextResponse.json({ success: true });
