@@ -5,15 +5,6 @@ import { useState, useEffect, useRef } from 'react';
 const PRICE_PER_SQFT = 0.2163;
 const ROOF_MULTIPLIER = 1.25;
 
-const SERVICES = [
-  { name: 'House Power Wash', icon: '🏠' },
-  { name: 'Exterior Window Cleaning', icon: '🪟' },
-  { name: 'Front Walkway', icon: '🚶' },
-  { name: 'Roof Wash', icon: '🏚️' },
-  { name: '🥈 Silver Package', sub: 'House + Windows + Walkway — 10% off' },
-  { name: '🥇 Gold Package', sub: 'All Services — 20% off' },
-];
-
 const WHY = [
   { title: 'Locally Owned & Operated', desc: 'Proudly serving Schaumburg, Rosemont, and surrounding communities.' },
   { title: 'Fully Insured', desc: 'Your property is in safe hands. We carry full liability insurance on every job.' },
@@ -24,8 +15,11 @@ declare global {
   interface Window { google: any; initGoogleMaps: () => void; }
 }
 
+type ServiceKey = 'house' | 'windows' | 'walkway' | 'roof';
+
 export default function HomePage() {
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', address: '', service: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', address: '' });
+  const [selectedServices, setSelectedServices] = useState<Set<ServiceKey>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -36,10 +30,42 @@ export default function HomePage() {
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
 
-  const houseWashPrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : null;
-  const roofWashPrice = houseWashPrice ? Math.round(houseWashPrice * ROOF_MULTIPLIER) : null;
-  const silverPrice = houseWashPrice ? Math.round((houseWashPrice + 179 + 129) * 0.90) : null;
-  const goldPrice = (houseWashPrice && roofWashPrice) ? Math.round((houseWashPrice + 179 + 129 + roofWashPrice) * 0.80) : null;
+  const housePrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : 349;
+  const roofPrice = Math.round(housePrice * ROOF_MULTIPLIER);
+  const windowsPrice = 179;
+  const walkwayPrice = 129;
+
+  const SERVICE_OPTIONS: { key: ServiceKey; name: string; price: number }[] = [
+    { key: 'house', name: 'House Power Wash', price: housePrice },
+    { key: 'windows', name: 'Exterior Window Cleaning', price: windowsPrice },
+    { key: 'walkway', name: 'Front Walkway', price: walkwayPrice },
+    { key: 'roof', name: 'Roof Wash', price: roofPrice },
+  ];
+
+  const hasSilver = selectedServices.has('house') && selectedServices.has('windows') && selectedServices.has('walkway');
+  const hasGold = hasSilver && selectedServices.has('roof');
+  const isPackage = hasSilver; // silver or gold
+
+  const baseTotal = SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).reduce((sum, s) => sum + s.price, 0);
+  const discount = hasGold ? 0.80 : hasSilver ? 0.90 : 1.0;
+  const totalPrice = Math.round(baseTotal * discount);
+  const savings = baseTotal - totalPrice;
+
+  const packageLabel = hasGold ? '🥇 Gold Package — 20% off applied!' : hasSilver ? '🥈 Silver Package — 10% off applied!' : null;
+
+  function toggleService(key: ServiceKey) {
+    setSelectedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  function buildServiceString() {
+    if (hasGold) return `Gold Package (House Wash, Window Cleaning, Walkway, Roof Wash) — $${totalPrice.toLocaleString()} (20% off)`;
+    if (hasSilver) return `Silver Package (House Wash, Window Cleaning, Walkway) — $${totalPrice.toLocaleString()} (10% off)`;
+    return SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => `${s.name} ($${s.price.toLocaleString()})`).join(', ');
+  }
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -47,13 +73,12 @@ export default function HomePage() {
     function setupAutocomplete() {
       if (!addressInputRef.current || autocompleteRef.current) return;
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
-        addressInputRef.current,
-        { types: ['address'], componentRestrictions: { country: 'us' } }
+        addressInputRef.current, { types: ['address'], componentRestrictions: { country: 'us' } }
       );
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current.getPlace();
         const addr = place.formatted_address || '';
-        if (addr) { setForm(prev => ({ ...prev, address: addr, service: '' })); handleAddressSelected(addr); }
+        if (addr) { setForm(prev => ({ ...prev, address: addr })); handleAddressSelected(addr); }
       });
     }
     if (window.google?.maps?.places) { setupAutocomplete(); }
@@ -68,7 +93,7 @@ export default function HomePage() {
   }, []);
 
   async function handleAddressSelected(address: string) {
-    setAddressConfirmed(true); setLoadingProperty(true); setSquareFootage(null); setHousePhoto('');
+    setAddressConfirmed(true); setLoadingProperty(true); setSquareFootage(null); setHousePhoto(''); setSelectedServices(new Set());
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (apiKey) setHousePhoto(`https://maps.googleapis.com/maps/api/streetview?size=700x350&location=${encodeURIComponent(address)}&key=${apiKey}`);
     try {
@@ -82,17 +107,20 @@ export default function HomePage() {
   function scrollToForm() { document.getElementById('quote')?.scrollIntoView({ behavior: 'smooth' }); }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setSubmitting(true); setError('');
+    e.preventDefault();
+    if (selectedServices.size === 0) { setError('Please select at least one service.'); return; }
+    setSubmitting(true); setError('');
     try {
-      const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, squareFootage }) });
+      const res = await fetch('/api/contact', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, squareFootage, service: buildServiceString(), total: totalPrice }),
+      });
       const data = await res.json();
       if (data.success) setSubmitted(true);
       else setError('Something went wrong. Please try again or call us directly.');
     } catch { setError('Something went wrong. Please try again or call us directly.'); }
     setSubmitting(false);
   }
-
-  function fmt(n: number) { return '$' + n.toLocaleString(); }
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -108,19 +136,15 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero — full bleed photo */}
+      {/* Hero */}
       <section className="relative min-h-[580px] flex items-center justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/photo-hero.png" alt="Rolling Suds at work" className="absolute inset-0 w-full h-full object-cover object-center" />
         <div className="absolute inset-0 bg-[#0D1B4B]/70" />
         <div className="relative z-10 max-w-3xl mx-auto px-4 text-center text-white py-24">
           <p className="text-[#D4A017] font-semibold text-sm uppercase tracking-widest mb-3">Schaumburg &amp; Rosemont</p>
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight drop-shadow-lg">
-            Professional Power Washing for Your Home
-          </h1>
-          <p className="text-gray-200 text-lg mb-8 max-w-xl mx-auto">
-            Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.
-          </p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-tight drop-shadow-lg">Professional Power Washing for Your Home</h1>
+          <p className="text-gray-200 text-lg mb-8 max-w-xl mx-auto">Rolling Suds of Schaumburg - Rosemont keeps your home looking its best — guaranteed.</p>
           <button onClick={scrollToForm} className="bg-[#D4A017] hover:bg-[#b8891a] text-white px-10 py-4 rounded-lg font-bold text-lg transition-colors shadow-xl">
             Get Your Free Quote
           </button>
@@ -157,7 +181,7 @@ export default function HomePage() {
       <section id="quote" className="py-20 px-4 bg-[#0D1B4B]">
         <div className="max-w-xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-2">Get Your Free Quote</h2>
-          <p className="text-gray-400 text-center text-sm mb-10">Enter your address for an instant price estimate based on your home&apos;s size.</p>
+          <p className="text-gray-400 text-center text-sm mb-10">Enter your address for instant pricing based on your home&apos;s size.</p>
 
           {submitted ? (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-10 text-center">
@@ -191,7 +215,7 @@ export default function HomePage() {
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Street Address *</label>
                 <input ref={addressInputRef} required type="text" id="address-input" value={form.address}
-                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); } }}
+                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); } }}
                   placeholder="Start typing your address..."
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
                 {!addressConfirmed && form.address.length === 0 && (
@@ -210,7 +234,7 @@ export default function HomePage() {
                     {loadingProperty ? (
                       <p className="text-gray-400 text-sm">Looking up property data...</p>
                     ) : squareFootage ? (
-                      <p className="text-gray-300 text-sm"><span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home detected — prices calculated below</p>
+                      <p className="text-gray-300 text-sm"><span className="text-white font-semibold">{squareFootage.toLocaleString()} sq ft</span> home — prices calculated below</p>
                     ) : (
                       <p className="text-gray-500 text-sm">Property size not found — showing standard prices</p>
                     )}
@@ -218,28 +242,45 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Service selection — only shown after address confirmed */}
+              {/* Service toggles — only shown after address confirmed */}
               {addressConfirmed && !loadingProperty && (
                 <div>
-                  <label className="block text-gray-300 text-sm mb-1">Select Your Service *</label>
-                  <select required value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })}
-                    className="w-full bg-[#1a2d5a] border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors">
-                    <option value="" disabled>Choose a service...</option>
-                    <option value={`House Power Wash - ${houseWashPrice ? fmt(houseWashPrice) : '$349'}`}>House Power Wash — {houseWashPrice ? fmt(houseWashPrice) : '$349'}</option>
-                    <option value="Exterior Window Cleaning - $179">Exterior Window Cleaning — $179</option>
-                    <option value="Front Walkway - $129">Front Walkway — $129</option>
-                    <option value={`Roof Wash - ${roofWashPrice ? fmt(roofWashPrice) : '$399'}`}>Roof Wash — {roofWashPrice ? fmt(roofWashPrice) : '$399'}</option>
-                    <option value={`Silver Package - ${silverPrice ? fmt(silverPrice) : 'save 10%'}`}>🥈 Silver Package — House, Windows &amp; Walkway {silverPrice ? `— ${fmt(silverPrice)} (10% off!)` : '— 10% off'}</option>
-                    <option value={`Gold Package - ${goldPrice ? fmt(goldPrice) : 'save 20%'}`}>🥇 Gold Package — All Services {goldPrice ? `— ${fmt(goldPrice)} (20% off!)` : '— 20% off'}</option>
-                  </select>
-                  {squareFootage && <p className="text-[#D4A017] text-xs mt-1">Prices calculated for your {squareFootage.toLocaleString()} sq ft home at ${PRICE_PER_SQFT}/sq ft</p>}
+                  <label className="block text-gray-300 text-sm mb-3">Select Services *</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {SERVICE_OPTIONS.map((svc) => {
+                      const selected = selectedServices.has(svc.key);
+                      return (
+                        <button key={svc.key} type="button" onClick={() => toggleService(svc.key)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${selected ? 'border-[#D4A017] bg-[#D4A017]/10' : 'border-white/20 bg-white/5 hover:border-white/40'}`}>
+                          <p className={`font-semibold text-sm ${selected ? 'text-[#D4A017]' : 'text-white'}`}>{svc.name}</p>
+                          <p className={`text-xs mt-0.5 ${selected ? 'text-[#D4A017]/80' : 'text-gray-400'}`}>${svc.price.toLocaleString()}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Package upgrade banner */}
+                  {packageLabel && (
+                    <div className="mt-3 p-3 rounded-lg bg-[#D4A017]/15 border border-[#D4A017]/40 text-center">
+                      <p className="text-[#D4A017] font-semibold text-sm">{packageLabel}</p>
+                      {savings > 0 && <p className="text-[#D4A017]/70 text-xs mt-0.5">You save ${savings.toLocaleString()}</p>}
+                    </div>
+                  )}
+
+                  {/* Running total */}
+                  {selectedServices.size > 0 && (
+                    <div className="mt-3 flex items-center justify-between px-4 py-3 bg-white/5 rounded-xl border border-white/10">
+                      <span className="text-gray-300 text-sm">{isPackage ? (hasGold ? 'Gold Package Total' : 'Silver Package Total') : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
+                      <span className="text-white font-bold text-lg">${totalPrice.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
               {addressConfirmed && !loadingProperty && (
-                <button type="submit" disabled={submitting}
+                <button type="submit" disabled={submitting || selectedServices.size === 0}
                   className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors disabled:opacity-50 shadow-lg mt-2">
                   {submitting ? 'Sending...' : 'Submit Request'}
                 </button>
