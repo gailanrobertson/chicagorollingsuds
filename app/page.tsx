@@ -42,16 +42,26 @@ export default function HomePage() {
     { key: 'roof', name: 'Roof Wash', price: roofPrice },
   ];
 
-  const hasSilver = selectedServices.has('house') && selectedServices.has('windows') && selectedServices.has('walkway');
-  const hasGold = hasSilver && selectedServices.has('roof');
-  const isPackage = hasSilver; // silver or gold
+  const count = selectedServices.size;
+  const isPlatinum = count === 4;
+  const isGold     = count === 3;
+  const isSilver   = count === 2;
 
+  const discount = isPlatinum ? 0.80 : isGold ? 0.90 : isSilver ? 0.95 : 1.0;
   const baseTotal = SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).reduce((sum, s) => sum + s.price, 0);
-  const discount = hasGold ? 0.80 : hasSilver ? 0.90 : 1.0;
   const totalPrice = Math.round(baseTotal * discount);
   const savings = baseTotal - totalPrice;
 
-  const packageLabel = hasGold ? '🥇 Gold Package — 20% off applied!' : hasSilver ? '🥈 Silver Package — 10% off applied!' : null;
+  const packageLabel = isPlatinum ? '💎 Platinum Package — 20% off applied!'
+    : isGold     ? '🥇 Gold Package — 10% off applied!'
+    : isSilver   ? '🥈 Silver Package — 5% off applied!'
+    : null;
+
+  const upsellMsg = isPlatinum ? null
+    : isGold     ? '➕ Add 1 more service to unlock 20% off — Platinum!'
+    : isSilver   ? '➕ Add 1 more service to unlock 10% off — Gold!'
+    : count === 1 ? '➕ Add 1 more service to unlock 5% off — Silver!'
+    : null;
 
   function toggleService(key: ServiceKey) {
     setSelectedServices(prev => {
@@ -62,9 +72,9 @@ export default function HomePage() {
   }
 
   function buildServiceString() {
-    if (hasGold) return `Gold Package (House Wash, Window Cleaning, Walkway, Roof Wash) — $${totalPrice.toLocaleString()} (20% off)`;
-    if (hasSilver) return `Silver Package (House Wash, Window Cleaning, Walkway) — $${totalPrice.toLocaleString()} (10% off)`;
-    return SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => `${s.name} ($${s.price.toLocaleString()})`).join(', ');
+    const names = SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => s.name).join(', ');
+    const pkg = isPlatinum ? 'Platinum Package (20% off)' : isGold ? 'Gold Package (10% off)' : isSilver ? 'Silver Package (5% off)' : '';
+    return pkg ? `${pkg}: ${names} — $${totalPrice.toLocaleString()}` : `${names} — $${totalPrice.toLocaleString()}`;
   }
 
   useEffect(() => {
@@ -267,10 +277,17 @@ export default function HomePage() {
                     </div>
                   )}
 
+                  {/* Upsell nudge */}
+                  {upsellMsg && (
+                    <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 text-center">
+                      <p className="text-gray-400 text-xs">{upsellMsg}</p>
+                    </div>
+                  )}
+
                   {/* Running total */}
                   {selectedServices.size > 0 && (
                     <div className="mt-3 flex items-center justify-between px-4 py-3 bg-white/5 rounded-xl border border-white/10">
-                      <span className="text-gray-300 text-sm">{isPackage ? (hasGold ? 'Gold Package Total' : 'Silver Package Total') : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
+                      <span className="text-gray-300 text-sm">{isPlatinum ? 'Platinum Package Total' : isGold ? 'Gold Package Total' : isSilver ? 'Silver Package Total' : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
                       <span className="text-white font-bold text-lg">${totalPrice.toLocaleString()}</span>
                     </div>
                   )}
