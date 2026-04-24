@@ -331,7 +331,7 @@ export default function HomePage() {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     rows={3}
-                    placeholder="List any additional services you're interested in — gutter cleaning, driveway sealing, etc. An estimator will call you with a free quote."
+                    placeholder="List any additional services you're interested in — gutter cleaning, limestone patio, etc. An estimator will call you with a free quote."
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors resize-none text-sm"
                   />
                 </div>
