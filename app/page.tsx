@@ -63,6 +63,13 @@ export default function HomePage() {
     : count === 1 ? '➕ Add 1 more service to unlock 5% off — Silver!'
     : null;
 
+  const accentColor = isPlatinum ? '#8EC8DC' : isGold ? '#D4A017' : '#B8B8C0';
+  const bannerBg    = isPlatinum ? 'rgba(18,50,70,0.50)'      : isGold ? 'rgba(212,160,23,0.15)'  : 'rgba(184,184,192,0.10)';
+  const bannerBord  = isPlatinum ? 'rgba(142,200,220,0.50)'   : isGold ? 'rgba(212,160,23,0.40)'  : 'rgba(184,184,192,0.30)';
+  const platGrad: React.CSSProperties = isPlatinum
+    ? { background: 'linear-gradient(90deg,#7BBDD4,#D0ECF7,#9AC8DC,#D0ECF7,#7BBDD4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
+    : { color: accentColor };
+
   function toggleService(key: ServiceKey) {
     setSelectedServices(prev => {
       const next = new Set(prev);
@@ -261,9 +268,12 @@ export default function HomePage() {
                       const selected = selectedServices.has(svc.key);
                       return (
                         <button key={svc.key} type="button" onClick={() => toggleService(svc.key)}
-                          className={`p-4 rounded-xl border-2 text-left transition-all ${selected ? 'border-[#D4A017] bg-[#D4A017]/10' : 'border-white/20 bg-white/5 hover:border-white/40'}`}>
-                          <p className={`font-semibold text-sm ${selected ? 'text-[#D4A017]' : 'text-white'}`}>{svc.name}</p>
-                          <p className={`text-xs mt-0.5 ${selected ? 'text-[#D4A017]/80' : 'text-gray-400'}`}>${svc.price.toLocaleString()}</p>
+                          className="p-4 rounded-xl border-2 text-left transition-all"
+                          style={selected
+                            ? { borderColor: accentColor, backgroundColor: `${accentColor}22` }
+                            : { borderColor: 'rgba(255,255,255,0.20)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                          <p className="font-semibold text-sm" style={{ color: selected ? accentColor : 'white' }}>{svc.name}</p>
+                          <p className="text-xs mt-0.5" style={{ color: selected ? `${accentColor}BB` : '#9ca3af' }}>${svc.price.toLocaleString()}</p>
                         </button>
                       );
                     })}
@@ -271,24 +281,24 @@ export default function HomePage() {
 
                   {/* Package upgrade banner */}
                   {packageLabel && (
-                    <div className="mt-3 p-3 rounded-lg bg-[#D4A017]/15 border border-[#D4A017]/40 text-center">
-                      <p className="text-[#D4A017] font-semibold text-sm">{packageLabel}</p>
-                      {savings > 0 && <p className="text-[#D4A017]/70 text-xs mt-0.5">You save ${savings.toLocaleString()}</p>}
+                    <div className="mt-3 p-3 rounded-lg border text-center" style={{ background: bannerBg, borderColor: bannerBord }}>
+                      <p className="font-bold text-sm" style={platGrad}>{packageLabel}</p>
+                      {savings > 0 && <p className="text-xs mt-0.5" style={{ color: `${accentColor}AA` }}>You save ${savings.toLocaleString()}</p>}
                     </div>
                   )}
 
                   {/* Upsell nudge */}
                   {upsellMsg && (
                     <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 text-center">
-                      <p className="text-gray-400 text-xs">{upsellMsg}</p>
+                      <p className="text-xs" style={{ color: `${accentColor}99` }}>{upsellMsg}</p>
                     </div>
                   )}
 
                   {/* Running total */}
                   {selectedServices.size > 0 && (
-                    <div className="mt-3 flex items-center justify-between px-4 py-3 bg-white/5 rounded-xl border border-white/10">
-                      <span className="text-gray-300 text-sm">{isPlatinum ? 'Platinum Package Total' : isGold ? 'Gold Package Total' : isSilver ? 'Silver Package Total' : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
-                      <span className="text-white font-bold text-lg">${totalPrice.toLocaleString()}</span>
+                    <div className="mt-3 flex items-center justify-between px-4 py-3 rounded-xl border" style={{ background: `${accentColor}11`, borderColor: `${accentColor}33` }}>
+                      <span className="text-sm" style={{ color: `${accentColor}CC` }}>{isPlatinum ? 'Platinum Package Total' : isGold ? 'Gold Package Total' : isSilver ? 'Silver Package Total' : `${selectedServices.size} service${selectedServices.size > 1 ? 's' : ''} selected`}</span>
+                      <span className="font-bold text-lg" style={{ color: accentColor }}>${totalPrice.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
