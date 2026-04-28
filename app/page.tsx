@@ -45,6 +45,10 @@ export default function HomePage() {
   const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   // Lead capture state
   const [showAddressWarning, setShowAddressWarning] = useState(false);
@@ -194,8 +198,29 @@ export default function HomePage() {
     return pkg ? `${pkg}: ${names} — $${totalPrice.toLocaleString()}` : `${names} — $${totalPrice.toLocaleString()}`;
   }
 
+  // Read DOM values directly so browser autofill (which skips React onChange) is handled correctly
+  function contactInfoFilled() {
+    const fn = firstNameRef.current?.value || form.firstName;
+    const ln = lastNameRef.current?.value || form.lastName;
+    const em = emailRef.current?.value || form.email;
+    const ph = phoneRef.current?.value || form.phone;
+    return !!(fn && ln && em && ph);
+  }
+
+  // Sync autofilled DOM values into React state so the rest of the form stays consistent
+  function syncAutofill() {
+    setForm(prev => ({
+      ...prev,
+      firstName: firstNameRef.current?.value || prev.firstName,
+      lastName: lastNameRef.current?.value || prev.lastName,
+      email: emailRef.current?.value || prev.email,
+      phone: phoneRef.current?.value || prev.phone,
+    }));
+  }
+
   function handleAddressFocus() {
-    if (!form.firstName || !form.lastName || !form.email || !form.phone) {
+    syncAutofill();
+    if (!contactInfoFilled()) {
       setShowAddressWarning(true);
     }
   }
@@ -226,8 +251,9 @@ export default function HomePage() {
   }, []);
 
   async function handleAddressSelected(address: string) {
-    // Require contact info before any API calls
-    if (!form.firstName || !form.lastName || !form.email || !form.phone) {
+    // Require contact info before any API calls (check DOM values to handle browser autofill)
+    syncAutofill();
+    if (!contactInfoFilled()) {
       setShowAddressWarning(true);
       setForm(prev => ({ ...prev, address: '' }));
       return;
@@ -331,23 +357,23 @@ export default function HomePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">First Name *</label>
-                  <input required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  <input ref={firstNameRef} required type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} onBlur={syncAutofill}
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
                 </div>
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">Last Name *</label>
-                  <input required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  <input ref={lastNameRef} required type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} onBlur={syncAutofill}
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
                 </div>
               </div>
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Email *</label>
-                <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                <input ref={emailRef} required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} onBlur={syncAutofill}
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
               </div>
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Phone Number *</label>
-                <input required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                <input ref={phoneRef} required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} onBlur={syncAutofill}
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4A017] transition-colors" />
               </div>
               <div>
