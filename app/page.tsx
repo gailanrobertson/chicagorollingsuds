@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 
 const PRICE_PER_SQFT = 0.2163;
 const ROOF_MULTIPLIER = 1.25;
+const ADDRESS_LIMIT = 2;
+const SESSION_KEY = 'rs_addr_count';
 
 const WHY = [
   { title: 'Locally Owned & Operated', desc: 'Proudly serving Schaumburg, Rosemont, and surrounding communities.' },
@@ -44,43 +46,12 @@ export default function HomePage() {
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
 
-  function galleryNav(dir: 1 | -1) {
-    setGalleryIndex(i => (i + dir + GALLERY.length) % GALLERY.length);
-    if (galleryTimer.current) clearTimeout(galleryTimer.current);
-    galleryTimer.current = setTimeout(() => setGalleryIndex(i => (i + 1) % GALLERY.length), 5000);
-  }
-
-  useEffect(() => {
-    galleryTimer.current = setTimeout(function tick() {
-      setGalleryIndex(i => (i + 1) % GALLERY.length);
-      galleryTimer.current = setTimeout(tick, 5000);
-    }, 5000);
-    return () => { if (galleryTimer.current) clearTimeout(galleryTimer.current); };
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/reviews').then(r => r.json()).then(d => {
-      if (d.reviews?.length) setReviews(d.reviews);
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!reviews.length) return;
-    reviewTimer.current = setTimeout(function tick() {
-      setReviewIndex(i => (i + 1) % reviews.length);
-      reviewTimer.current = setTimeout(tick, 5000);
-    }, 5000);
-    return () => { if (reviewTimer.current) clearTimeout(reviewTimer.current); };
-  }, [reviews]);
-
-  function reviewNav(dir: 1 | -1) {
-    setReviewIndex(i => (i + dir + reviews.length) % reviews.length);
-    if (reviewTimer.current) clearTimeout(reviewTimer.current);
-    reviewTimer.current = setTimeout(function tick() {
-      setReviewIndex(i => (i + 1) % reviews.length);
-      reviewTimer.current = setTimeout(tick, 5000);
-    }, 5000);
-  }
+  // Lead capture state
+  const [showAddressWarning, setShowAddressWarning] = useState(false);
+  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const [hasSelectedServices, setHasSelectedServices] = useState(false);
+  const [confirmedAddresses, setConfirmedAddresses] = useState<string[]>([]);
+  const [addressLimitReached, setAddressLimitReached] = useState(false);
 
   const housePrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : 349;
   const roofPrice = Math.round(housePrice * ROOF_MULTIPLIER);
@@ -122,18 +93,111 @@ export default function HomePage() {
     ? { background: 'linear-gradient(90deg,#7BBDD4,#D0ECF7,#9AC8DC,#D0ECF7,#7BBDD4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
     : { color: accentColor };
 
+  // Keep a ref with latest lead data so beforeunload always reads fresh values
+  const leadDataRef = useRef({
+    form,
+    confirmedAddresses,
+    services: [] as { name: string; price: number }[],
+    total: 0,
+    packageName: null as string | null,
+    hasSelectedServices,
+    quoteSubmitted,
+  });
+  leadDataRef.current = {
+    form,
+    confirmedAddresses,
+    services: SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => ({ name: s.name, price: s.price })),
+    total: totalPrice,
+    packageName: isPlatinum ? 'Platinum Package' : isGold ? 'Gold Package' : isSilver ? 'Silver Package' : null,
+    hasSelectedServices,
+    quoteSubmitted,
+  };
+
+  // Send lead capture email when user leaves without submitting a quote
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const d = leadDataRef.current;
+      if (!d.hasSelectedServices || d.quoteSubmitted) return;
+      const payload = JSON.stringify({
+        firstName: d.form.firstName,
+        lastName: d.form.lastName,
+        email: d.form.email,
+        phone: d.form.phone,
+        addresses: d.confirmedAddresses,
+        services: d.services,
+        total: d.total,
+        packageName: d.packageName,
+      });
+      navigator.sendBeacon('/api/lead', new Blob([payload], { type: 'application/json' }));
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
+  // Clear address warning once all required contact fields are filled
+  useEffect(() => {
+    if (form.firstName && form.lastName && form.email && form.phone) {
+      setShowAddressWarning(false);
+    }
+  }, [form.firstName, form.lastName, form.email, form.phone]);
+
+  function galleryNav(dir: 1 | -1) {
+    setGalleryIndex(i => (i + dir + GALLERY.length) % GALLERY.length);
+    if (galleryTimer.current) clearTimeout(galleryTimer.current);
+    galleryTimer.current = setTimeout(() => setGalleryIndex(i => (i + 1) % GALLERY.length), 5000);
+  }
+
+  useEffect(() => {
+    galleryTimer.current = setTimeout(function tick() {
+      setGalleryIndex(i => (i + 1) % GALLERY.length);
+      galleryTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+    return () => { if (galleryTimer.current) clearTimeout(galleryTimer.current); };
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/reviews').then(r => r.json()).then(d => {
+      if (d.reviews?.length) setReviews(d.reviews);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!reviews.length) return;
+    reviewTimer.current = setTimeout(function tick() {
+      setReviewIndex(i => (i + 1) % reviews.length);
+      reviewTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+    return () => { if (reviewTimer.current) clearTimeout(reviewTimer.current); };
+  }, [reviews]);
+
+  function reviewNav(dir: 1 | -1) {
+    setReviewIndex(i => (i + dir + reviews.length) % reviews.length);
+    if (reviewTimer.current) clearTimeout(reviewTimer.current);
+    reviewTimer.current = setTimeout(function tick() {
+      setReviewIndex(i => (i + 1) % reviews.length);
+      reviewTimer.current = setTimeout(tick, 5000);
+    }, 5000);
+  }
+
   function toggleService(key: ServiceKey) {
     setSelectedServices(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
+    setHasSelectedServices(true);
   }
 
   function buildServiceString() {
     const names = SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).map(s => s.name).join(', ');
     const pkg = isPlatinum ? 'Platinum Package (20% off)' : isGold ? 'Gold Package (10% off)' : isSilver ? 'Silver Package (5% off)' : '';
     return pkg ? `${pkg}: ${names} — $${totalPrice.toLocaleString()}` : `${names} — $${totalPrice.toLocaleString()}`;
+  }
+
+  function handleAddressFocus() {
+    if (!form.firstName || !form.lastName || !form.email || !form.phone) {
+      setShowAddressWarning(true);
+    }
   }
 
   useEffect(() => {
@@ -162,12 +226,40 @@ export default function HomePage() {
   }, []);
 
   async function handleAddressSelected(address: string) {
-    setAddressConfirmed(true); setLoadingProperty(true); setSquareFootage(null); setHousePhoto(''); setSelectedServices(new Set());
+    // Require contact info before any API calls
+    if (!form.firstName || !form.lastName || !form.email || !form.phone) {
+      setShowAddressWarning(true);
+      setForm(prev => ({ ...prev, address: '' }));
+      return;
+    }
+
+    // Client-side address limit check
+    const currentCount = parseInt(sessionStorage.getItem(SESSION_KEY) || '0');
+    if (currentCount >= ADDRESS_LIMIT) {
+      setAddressLimitReached(true);
+      return;
+    }
+    sessionStorage.setItem(SESSION_KEY, String(currentCount + 1));
+
+    setConfirmedAddresses(prev => [...prev, address]);
+    setAddressConfirmed(true);
+    setLoadingProperty(true);
+    setSquareFootage(null);
+    setHousePhoto('');
+    setSelectedServices(new Set());
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (apiKey) setHousePhoto(`https://maps.googleapis.com/maps/api/streetview?size=700x350&location=${encodeURIComponent(address)}&key=${apiKey}`);
     try {
       const res = await fetch(`/api/property?address=${encodeURIComponent(address)}`);
       const data = await res.json();
+      if (data.limitReached) {
+        setAddressLimitReached(true);
+        setAddressConfirmed(false);
+        setHousePhoto('');
+        setLoadingProperty(false);
+        return;
+      }
       if (data.found && data.squareFootage) setSquareFootage(data.squareFootage);
     } catch { /* default prices remain */ }
     setLoadingProperty(false);
@@ -198,8 +290,12 @@ export default function HomePage() {
         }),
       });
       const data = await res.json();
-      if (data.success) setSubmitted(true);
-      else setError('Something went wrong. Please try again or call us directly.');
+      if (data.success) {
+        setSubmitted(true);
+        setQuoteSubmitted(true);
+      } else {
+        setError('Something went wrong. Please try again or call us directly.');
+      }
     } catch { setError('Something went wrong. Please try again or call us directly.'); }
     setSubmitting(false);
   }
@@ -256,16 +352,41 @@ export default function HomePage() {
               </div>
               <div>
                 <label className="block text-gray-300 text-sm mb-1">Street Address *</label>
-                <input ref={addressInputRef} required type="text" id="address-input" value={form.address}
-                  onChange={(e) => { setForm({ ...form, address: e.target.value }); if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); } }}
+                <input
+                  ref={addressInputRef}
+                  required
+                  type="text"
+                  id="address-input"
+                  value={form.address}
+                  onFocus={handleAddressFocus}
+                  onChange={(e) => {
+                    setForm({ ...form, address: e.target.value });
+                    if (addressConfirmed) { setAddressConfirmed(false); setHousePhoto(''); setSquareFootage(null); setSelectedServices(new Set()); }
+                  }}
                   placeholder="Start typing your address..."
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors" />
-                {!addressConfirmed && form.address.length > 0 && (
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#D4A017] transition-colors"
+                />
+                {showAddressWarning && (
+                  <p className="text-yellow-400 text-sm mt-2 leading-snug">
+                    Almost there! Please fill in your name, email, and phone number first so we can build your personalized quote.
+                  </p>
+                )}
+                {!showAddressWarning && !addressConfirmed && form.address.length > 0 && (
                   <p className="text-yellow-500 text-xs mt-1">Select your address from the dropdown to confirm it</p>
                 )}
               </div>
 
-              {(housePhoto || loadingProperty) && (
+              {/* Address limit reached message */}
+              {addressLimitReached && (
+                <div className="p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl text-center">
+                  <p className="text-blue-300 font-semibold text-sm">Multiple properties? We&apos;ve got you covered!</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    A member of our team will be reaching out to discuss your properties and put together the right package for you.
+                  </p>
+                </div>
+              )}
+
+              {!addressLimitReached && (housePhoto || loadingProperty) && (
                 <div className="rounded-xl overflow-hidden border border-white/10">
                   {housePhoto && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -283,7 +404,7 @@ export default function HomePage() {
                 </div>
               )}
 
-              {addressConfirmed && !loadingProperty && (
+              {!addressLimitReached && addressConfirmed && !loadingProperty && (
                 <div>
                   <label className="block text-gray-300 text-sm mb-3">Select Services *</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -324,7 +445,7 @@ export default function HomePage() {
                 </div>
               )}
 
-              {addressConfirmed && !loadingProperty && (
+              {!addressLimitReached && addressConfirmed && !loadingProperty && (
                 <div>
                   <label className="block text-gray-300 text-sm mb-1">Anything else? <span className="text-gray-500 font-normal">(optional)</span></label>
                   <textarea
@@ -339,7 +460,7 @@ export default function HomePage() {
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
-              {addressConfirmed && !loadingProperty && (
+              {!addressLimitReached && addressConfirmed && !loadingProperty && (
                 <button type="submit" disabled={submitting}
                   className="w-full bg-[#D4A017] hover:bg-[#b8891a] text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg disabled:opacity-60">
                   {submitting ? 'Sending...' : 'Send My Quote'}
