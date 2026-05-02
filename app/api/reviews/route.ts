@@ -13,7 +13,7 @@ export async function GET() {
     const data = await res.json();
     const result = data?.result;
     const reviews = (result?.reviews ?? [])
-      .filter((r: any) => r.rating >= 4)
+      .filter((r: any) => r.rating === 5 && r.text?.trim().split(/\s+/).length >= 10)
       .sort((a: any, b: any) => b.time - a.time)
       .map((r: any) => ({
         author: r.author_name,

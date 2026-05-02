@@ -56,18 +56,34 @@ export default function HomePage() {
   const [hasSelectedServices, setHasSelectedServices] = useState(false);
   const [confirmedAddresses, setConfirmedAddresses] = useState<string[]>([]);
   const [addressLimitReached, setAddressLimitReached] = useState(false);
+  const [driveMinutes, setDriveMinutes] = useState<number | null>(null);
 
   const housePrice = squareFootage ? Math.round(squareFootage * PRICE_PER_SQFT) : 349;
   const roofPrice = Math.round(housePrice * ROOF_MULTIPLIER);
   const windowsPrice = 179;
   const walkwayPrice = 129;
 
-  const SERVICE_OPTIONS: { key: ServiceKey; name: string; price: number }[] = [
-    { key: 'house', name: 'House Power Wash', price: housePrice },
-    { key: 'windows', name: 'Exterior Window Cleaning', price: windowsPrice },
-    { key: 'walkway', name: 'Front Walkway', price: walkwayPrice },
-    { key: 'roof', name: 'Roof Wash', price: roofPrice },
+  // Distance surcharge: $30 flat + $2/min past 45
+  const driveSurcharge = driveMinutes !== null && driveMinutes > 45
+    ? 30 + 2 * (driveMinutes - 45)
+    : 0;
+  // Under $100 → bake silently into service price; $100+ → show as separate line item
+  const surchargeVisible = driveSurcharge >= 100;
+
+  const BASE_OPTIONS = [
+    { key: 'house' as ServiceKey,   name: 'House Power Wash',          price: housePrice },
+    { key: 'windows' as ServiceKey, name: 'Exterior Window Cleaning',  price: windowsPrice },
+    { key: 'walkway' as ServiceKey, name: 'Front Walkway',             price: walkwayPrice },
+    { key: 'roof' as ServiceKey,    name: 'Roof Wash',                 price: roofPrice },
   ];
+  const surchargeKey: ServiceKey = selectedServices.has('house')
+    ? 'house'
+    : (BASE_OPTIONS.filter(s => selectedServices.has(s.key)).sort((a, b) => b.price - a.price)[0]?.key ?? 'house');
+
+  const SERVICE_OPTIONS: { key: ServiceKey; name: string; price: number }[] = BASE_OPTIONS.map(s => ({
+    ...s,
+    price: !surchargeVisible && s.key === surchargeKey ? s.price + driveSurcharge : s.price,
+  }));
 
   const count = selectedServices.size;
   const isPlatinum = count === 4;
@@ -76,8 +92,9 @@ export default function HomePage() {
 
   const discount = isPlatinum ? 0.80 : isGold ? 0.90 : isSilver ? 0.95 : 1.0;
   const baseTotal = SERVICE_OPTIONS.filter(s => selectedServices.has(s.key)).reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = Math.round(baseTotal * discount);
-  const savings = baseTotal - totalPrice;
+  const discountedServices = Math.round(baseTotal * discount);
+  const totalPrice = discountedServices + (surchargeVisible && selectedServices.size > 0 ? driveSurcharge : 0);
+  const savings = baseTotal - discountedServices;
 
   const packageLabel = isPlatinum ? '💎 Platinum Package — 20% off applied!'
     : isGold     ? '🥇 Gold Package — 10% off applied!'
@@ -250,6 +267,16 @@ export default function HomePage() {
     }
   }, []);
 
+  function notifyMultiProperty(addresses: string[]) {
+    const { firstName, lastName, email, phone } = form;
+    if (!firstName && !email && !phone) return; // nothing to send
+    fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, email, phone, addresses, services: [], total: 0, isMultiProperty: true }),
+    }).catch(() => {});
+  }
+
   async function handleAddressSelected(address: string) {
     // Require contact info before any API calls (check DOM values to handle browser autofill)
     syncAutofill();
@@ -263,6 +290,7 @@ export default function HomePage() {
     const currentCount = parseInt(sessionStorage.getItem(SESSION_KEY) || '0');
     if (currentCount >= ADDRESS_LIMIT) {
       setAddressLimitReached(true);
+      notifyMultiProperty([...confirmedAddresses, address]);
       return;
     }
     sessionStorage.setItem(SESSION_KEY, String(currentCount + 1));
@@ -273,6 +301,21 @@ export default function HomePage() {
     setSquareFootage(null);
     setHousePhoto('');
     setSelectedServices(new Set());
+    setDriveMinutes(null);
+
+    // Silently calculate drive time from warehouse for distance surcharge
+    if (window.google?.maps) {
+      const svc = new window.google.maps.DistanceMatrixService();
+      svc.getDistanceMatrix(
+        { origins: ['142 Eisenhower Ln S, Lombard IL 60148'], destinations: [address], travelMode: window.google.maps.TravelMode.DRIVING },
+        (response: any, status: any) => {
+          if (status === 'OK') {
+            const mins = Math.round(response.rows[0].elements[0].duration.value / 60);
+            setDriveMinutes(mins);
+          }
+        }
+      );
+    }
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (apiKey) setHousePhoto(`https://maps.googleapis.com/maps/api/streetview?size=700x350&location=${encodeURIComponent(address)}&key=${apiKey}`);
@@ -284,6 +327,7 @@ export default function HomePage() {
         setAddressConfirmed(false);
         setHousePhoto('');
         setLoadingProperty(false);
+        notifyMultiProperty([...confirmedAddresses, address]);
         return;
       }
       if (data.found && data.squareFootage) setSquareFootage(data.squareFootage);
@@ -459,6 +503,13 @@ export default function HomePage() {
                   {upsellMsg && (
                     <div className="mt-2 p-2 rounded-lg bg-white/5 border border-white/10 text-center">
                       <p className="text-xs" style={{ color: `${accentColor}99` }}>{upsellMsg}</p>
+                    </div>
+                  )}
+
+                  {surchargeVisible && selectedServices.size > 0 && (
+                    <div className="mt-3 flex items-center justify-between px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                      <span className="text-xs text-amber-300">Distance charge — our warehouse is in Lombard, IL</span>
+                      <span className="text-sm font-semibold text-amber-300">+${driveSurcharge.toLocaleString()}</span>
                     </div>
                   )}
 
